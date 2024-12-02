@@ -1,7 +1,9 @@
-# obiettivo del progetto: installare pacchetti, creare utenti e ralitivi gruppi in modo dinamico in modo da poter lasciare il più puliti possibile i due playbook
+# obiettivo del progetto: 
+installare pacchetti, creare utenti e relitivi gruppi in modo dinamico in modo da poter lasciare il più puliti possibile i due playbook
 
 # spiegazione vagrantfile
 come sempre all'interno del vagrantfile sono andato a definire una vm dandogli la box ubuntu/jammy64 e i due playbook nel provision.
+
 # spiegazione playbook.yml
 All'interno di questo playbook ho creato i gruppi e successivamente gli utenti i quali ho correlato ai relativi gruppi grazie all' elemento loop.
 
