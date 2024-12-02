@@ -2,7 +2,15 @@
 installare pacchetti, creare utenti e relitivi gruppi in modo dinamico in modo da poter lasciare il più puliti possibile i due playbook
 
 # spiegazione vagrantfile
-come sempre all'interno del vagrantfile sono andato a definire una vm dandogli la box ubuntu/jammy64 e i due playbook nel provision.
+come sempre all'interno del vagrantfile sono andato a definire una vm dandogli la box ubuntu/jammy64 
+
+    config.vm.box = "ubuntu/jammy64"
+    config.vm.network "private_network", ip: "192.168.10.10"
+e i due playbook nel provision
+
+    config.vm.provision "ansible" do |ansible|
+        ansible.playbook = "playbook.yml"
+        ansible.playbook = "playbook_pack.yml"
 
 # spiegazione playbook.yml
 All'interno di questo playbook ho creato i gruppi e successivamente gli utenti i quali ho correlato ai relativi gruppi grazie all' elemento loop.
