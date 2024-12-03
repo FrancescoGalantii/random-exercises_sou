@@ -2,6 +2,7 @@
 l'obiettivo di questo progetto era prender confidenza con i template Jinja e vedere come essi possano aiutare nella creazione di file configurabili dinamicamente.
 
 ***`spiegazione playbook`***
+
 **`primo step`**; aggiungere aggiungere in append sul file `/etc/security/limits.conf` alcuni settings per un’utente. 
 
 • In ambiente di produzione dobbiamo imporre un numero massimo di file aperti pari a 10000, mentre in ambiente di collaudo e sviluppo 1000
@@ -13,7 +14,8 @@ environment: "prod"
       test: 1000
 
 • Supponiamo che in `/etc/security/access.conf` ci sia un’ultima riga che impedisce l’accesso agli utenti non esplicitamente autorizzati (“- : ALL : ALL”). 
-Creare un playbook Ansible che aggiunga una lista di utenti in whitelist anteponendosi a tale riga (hint: utilizzare l’opzione insertbefore del modulo blockinfile).
+
+• Creare un playbook Ansible che aggiunga una lista di utenti in whitelist anteponendosi a tale riga (hint: utilizzare l’opzione insertbefore del modulo blockinfile).
 sono andato perciò prima a specificare gli utenti:
 
     user_name: utenti 
@@ -35,6 +37,7 @@ per poi configurare la `whitelist`:
           state: present
         tags: whitelist
 • [OPZIONALE]; Trovare un possibile utilizzo dei Jinja templates per la parametrizzazione di almeno uno dei seguenti oggetti:
+
 - **`Dockerfile`**
 - **`File yaml rappresentante un pod o un deployment Kubernetes`**
 - **`Virtual host di apache`**
