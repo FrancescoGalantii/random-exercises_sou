@@ -84,11 +84,17 @@ se non si ha apache scaricato all'esecuzione del playbook si avra il seguente er
 fatal: [default]: FAILED! => {"changed": false, "checksum": "d2e92065bf18e319e7e089dcd5d41c5cad9efcd2", "msg": "Destination directory /etc/httpd/conf.d does not exist"
 
 Arrivati a questo punto per verificare che tutto sia andato a buon fine lanciare i seguenti comandi:
+
 • `vagrant`; ssh per entrare all'interno della vm
+
 • `cd /etc/security`; per accedere alla directory contenente il file access.conf
+
 • `cat access.conf`; per controllare se sono stati aggiunti in append gli utenti della whitelist
+
 • `cat pod.yaml`; per vedere se è stato creato il pod 
+
 • `cd /etc/httpd/conf.d/`; per entrare nella cartella di destinazione del host apache
+
 • `cat file_host.com.conf`; per vedere se è stato creato l'host apache.
 
 
