@@ -1,0 +1,54 @@
+---
+- name: Configurazione Sistemi con Ansible
+  hosts: all
+  become: true
+  vars:
+    environment: "prod" 
+    user_limits:
+      prod: 10000
+      dev: 1000
+      test: 1000
+    user_name: utenti 
+    whitelist_users:
+      - francesco
+      - lorenzo
+      - giosue
+    pod_spec:
+      pod_name: "my-pod"
+      container_name: "my-container"
+      container_image: "nginx:latest"
+      container_port: 80
+    apache_config:
+      server_name: "example.com"
+      document_root: "/var/www/example"
+
+  tasks:
+    - name: Creare il file limits.conf da template
+      ansible.builtin.template:
+        src: template/limits.conf.j2
+        dest: /tmp/limits.conf
+
+    - name: Configura whitelist utenti in access.conf
+      blockinfile:
+        path: /etc/security/access.conf
+        block: |
+          {% for user in whitelist_users %}
+          + : {{ user }} : ALL
+          {% endfor %}
+        insertbefore: '^-\s*:\s*ALL\s*:\s*ALL'
+        state: present
+      tags: whitelist
+
+    - name: Genera YAML per pod Kubernetes
+      template:
+        src: /Users/francescogalanti/random-exercises_sou/Jinja_templ/template/pod.yaml.j2
+        dest: ./pod.yaml
+      tags: kubernetes
+
+    - name: Genera configurazione Virtual Host Apache
+      template:
+        src: /Users/francescogalanti/random-exercises_sou/Jinja_templ/template/virtualhost.conf.j2
+        dest: /etc/httpd/conf.d/{{ apache_config.server_name }}.conf
+      notify:
+        - Ricarica Apache
+

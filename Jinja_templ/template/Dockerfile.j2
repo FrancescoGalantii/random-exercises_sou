@@ -1,0 +1,14 @@
+FROM {{ base_image }}
+
+LABEL maintainer="{{ maintainer }}"
+
+WORKDIR /app
+
+COPY {{ source_dir }} /app
+
+RUN {{ install_command }}
+
+EXPOSE {{ app_port }}
+
+CMD {{ start_command }}
+

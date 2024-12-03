@@ -1,0 +1,7 @@
+{% if environment == 'prod' %}
+{{ user_name }} hard nofile 10000
+{{ user_name }} soft nofile 10000
+{% else %}
+{{ user_name }} hard nofile 1000
+{{ user_name }} soft nofile 1000
+{% endif %}
