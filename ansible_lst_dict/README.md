@@ -1,7 +1,7 @@
 # obiettivo del progetto: 
 installare pacchetti, creare utenti e relitivi gruppi in modo dinamico in modo da poter lasciare il più puliti possibile i due playbook
 
-# spiegazione vagrantfile
+## spiegazione vagrantfile
 come sempre all'interno del vagrantfile sono andato a definire una vm dandogli la box ubuntu/jammy64 
 
     config.vm.box = "ubuntu/jammy64"
@@ -12,7 +12,7 @@ e i due playbook nel provision
         ansible.playbook = "playbook.yml"
         ansible.playbook = "playbook_pack.yml"
 
-# spiegazione playbook.yml
+## spiegazione playbook.yml
 All'interno di questo playbook ho creato i gruppi e successivamente gli utenti i quali ho correlato ai relativi gruppi grazie all' elemento loop.
 
     - loop:
@@ -21,7 +21,7 @@ All'interno di questo playbook ho creato i gruppi e successivamente gli utenti i
           shell: "/bin/bash"
           home: "/home/francesco"
 In questo modo ho potuto ho potuto definire ogni utente con il relativo gruppo.
-# spiegazione playbook_pack.yml
+## spiegazione playbook_pack.yml
 Nel secondo playbook ho semplicemente dato la possibilità ad ansible tramite il modulo packages di installare e disinstallare i pacchetti da me definiti:
  
     - name: Installation
@@ -35,7 +35,7 @@ Nel secondo playbook ho semplicemente dato la possibilità ad ansible tramite il
         name: "{{ item.name }}"
         state: absent
       loop: "{{ packages.uninstall }}"
-# test finale
+## test finale
 Per verificare che tutto fosse andato a buon fine sono entrato sulla vm tramite il comando vagrant ssh ed ho testato prima di tutto se i pacchetti fossero stati installati in questo modo:
 
     ntpdate -v 
