@@ -1,0 +1,195 @@
+- hosts: all
+  become: true
+  tasks:
+    - name: Upgrade all packages on servers
+      dnf:
+        name: '*'
+        state: latest
+
+    - name: Set up repository docker
+      shell: |
+        dnf install -y yum-utils
+        yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+    - name: Install docker
+      dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
+    - name: Install python requests
+      ansible.builtin.yum:
+        name: python3-requests
+        state: present
+
+    - name: Add the current user to the docker group
+      user:
+        name: rocky
+        groups: docker
+        append: yes
+
+    - name: Start and enable docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Create a network with custom IPAM config
+      docker_network:
+        name: dock_network
+        ipam_config:
+          - subnet: 192.168.10.0/24
+            gateway: 192.168.10.1
+
+    - name: Install Jenkins
+      docker_image:
+        name: "jenkins/jenkins"
+        source: pull
+
+    - name: Create a volume for the master
+      docker_volume:
+        name: jenkins_home
+        state: present
+
+    - name: Create a container from the Jenkins image
+      docker_container:
+        name: "jenkins-server"
+        image: jenkins/jenkins:lts
+        state: started
+        restart_policy: always
+        ports:
+          - "8080:8080"
+          - "50000:50000"
+        networks:
+          - name: dock_network
+            ipv4_address: 192.168.10.100
+        volumes:
+          - "jenkins_home:/var/jenkins_home"
+          - "/var/run/docker.sock:/var/run/docker.sock"
+          - "/usr/bin/docker:/usr/bin/docker"
+
+    - name: Pull the image for the Jenkins slave
+      docker_image:
+        name: jenkins/inbound-agent
+        source: pull
+
+    - name: Create a volume for the agent
+      docker_volume:
+        name: jenkinslave_home
+        state: present
+
+    - name: Connect the agent with the master
+      docker_container:
+        name: jenkinslave
+        image: jenkins/inbound-agent:latest
+        restart_policy: always
+        env:
+          JENKINS_URL: "http://jenkins-server:8080"
+          JENKINS_AGENT_NAME: "jenkinslave"
+          JENKINS_AGENT_WORKDIR: "/home/jenkins/agent"
+          JENKINS_SECRET: ""
+        volumes:
+          - "jenkinslave_home:/home/jenkins/agent"
+          - "/var/run/docker.sock:/var/run/docker.sock"
+          - "/usr/bin/docker:/usr/bin/docker"
+        networks:
+          - name: dock_network
+            ipv4_address: 192.168.10.99
+
+    - name: Wait for Jenkins to start
+      wait_for:
+        host: 192.168.10.100
+        port: 8080
+        delay: 30
+        timeout: 300
+
+    - name: Get Jenkins crumb
+      uri:
+        url: "http://192.168.10.100:8080/crumbIssuer/api/json"
+        user: "admin"
+        password: "{{ admin_password }}"
+        method: GET
+        return_content: yes
+        status_code: 200
+      register: crumb_response
+
+    - name: Parse crumb
+      set_fact:
+        jenkins_crumb: "{{ crumb_response.json.crumb }}"
+
+    - name: Generate Jenkins API token
+      uri:
+        url: "http://192.168.10.100:8080/me/descriptorByName/jenkins.security.ApiTokenProperty/generateNewToken"
+        user: "admin"
+        password: "{{ admin_password }}"
+        method: POST
+        headers:
+          Jenkins-Crumb: "{{ jenkins_crumb }}"
+        body:
+          newTokenName: "ansible_token"
+        body_format: json
+        return_content: yes
+      register: token_response
+
+    - name: Parse API token
+      set_fact:
+        jenkins_api_token: "{{ token_response.json.data.tokenValue }}"
+
+    - name: Create Jenkins agent node
+      uri:
+        url: "http://192.168.10.100:8080/computer/doCreateItem"
+        user: "admin"
+        password: "{{ jenkins_api_token }}"
+        method: POST
+        headers:
+          Jenkins-Crumb: "{{ jenkins_crumb }}"
+          Content-Type: "application/x-www-form-urlencoded"
+        body:
+          name: "jenkins-agent"
+          type: "hudson.slaves.DumbSlave"
+          json: |
+            {
+              "name": "jenkins-agent",
+              "nodeDescription": "",
+              "numExecutors": "1",
+              "remoteFS": "/home/jenkins/agent",
+              "labelString": "",
+              "mode": "EXCLUSIVE"
+            }
+        body_format: form-urlencoded
+        status_code: 200
+
+    - name: Get Jenkins agent secret
+      uri:
+        url: "http://192.168.10.100:8080/computer/jenkins-agent/jenkins-agent.jnlp"
+        user: "admin"
+        password: "{{ jenkins_api_token }}"
+        method: GET
+        return_content: yes
+      register: agent_secret_response
+
+    - name: Extract Jenkins agent secret
+      set_fact:
+        jenkins_agent_secret: "{{ agent_secret_response.content | regex_search('(?<=<argument>)(.*?)(?=</argument>)', '\\1') }}"
+
+    - name: Update agent container environment
+      docker_container:
+        name: jenkinslave
+        image: jenkins/inbound-agent:latest
+        restart_policy: always
+        env:
+          JENKINS_URL: "http://jenkins-server:8080"
+          JENKINS_AGENT_NAME: "jenkins-agent"
+          JENKINS_AGENT_WORKDIR: "/home/jenkins/agent"
+          JENKINS_SECRET: "{{ jenkins_agent_secret }}"
+        volumes:
+          - "jenkinslave_home:/home/jenkins/agent"
+          - "/var/run/docker.sock:/var/run/docker.sock"
+          - "/usr/bin/docker:/usr/bin/docker"
+        networks:
+          - name: dock_network
+            ipv4_address: 192.168.10.99
+        state: started
+
